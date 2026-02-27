@@ -94,7 +94,7 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -o build/${{ env.BINARY_NAME }}_dev_windows_amd64.exe ./cmd
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pr-${{ github.event.pull_request.number }}-builds
           path: build/
