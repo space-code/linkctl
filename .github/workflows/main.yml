@@ -1,0 +1,108 @@
+name: main
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.26.x'
+  BINARY_NAME: linkctl
+
+jobs:
+  format-and-lint:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install mise & tools
+        uses: jdx/mise-action@v2
+
+      - name: Cache Go tools
+        id: go-tools-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('.mise.toml') }}
+
+      - name: Install tooling
+        if: steps.go-tools-cache.outputs.cache-hit != 'true'
+        run: make tools
+
+      - name: Check formatting
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          make format-check
+
+      - name: Run lint
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          make lint
+
+  test:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run all tests
+        run: make test
+
+  build:
+    runs-on: macos-latest
+    needs: [format-and-lint, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build — macOS (arm64 / amd64)
+        run: |
+          mkdir -p build
+          GOOS=darwin GOARCH=arm64 go build -o build/${{ env.BINARY_NAME }}_dev_darwin_arm64 ./cmd
+          GOOS=darwin GOARCH=amd64 go build -o build/${{ env.BINARY_NAME }}_dev_darwin_amd64 ./cmd
+
+      - name: Build — Linux (arm64 / amd64)
+        run: |
+          GOOS=linux GOARCH=arm64 go build -o build/${{ env.BINARY_NAME }}_dev_linux_arm64 ./cmd
+          GOOS=linux GOARCH=amd64 go build -o build/${{ env.BINARY_NAME }}_dev_linux_amd64 ./cmd
+
+      - name: Build — Windows (amd64)
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o build/${{ env.BINARY_NAME }}_dev_windows_amd64.exe ./cmd
+
+      - name: Create checksums
+        run: |
+          cd build
+          shasum -a 256 * > ${{ env.BINARY_NAME }}_dev_checksums.txt
+          cat ${{ env.BINARY_NAME }}_dev_checksums.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-builds
+          path: build/
+          retention-days: 7
