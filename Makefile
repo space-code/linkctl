@@ -1,5 +1,5 @@
 # Binary & paths
-BINARY_NAME     := deeplink
+BINARY_NAME     := linkctl
 CMD_DIR         := ./cmd
 BUILD_DIR       := build
 DIST_DIR        := dist
