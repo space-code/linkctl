@@ -20,11 +20,13 @@ func NewCmdDevices(f *cmdutil.Factory) *cobra.Command {
 		Use:     "devices",
 		Short:   "List connected iOS simulators",
 		Long:    "List all currently booted iOS simulators.",
-		Example: `deeplink devices`,
+		Example: `linkctl devices`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(f, &opts)
 		},
 	}
+
+	cmd.Flags().BoolVar(&opts.asJSON, "json", false, "Output results as JSON")
 
 	return cmd
 }
