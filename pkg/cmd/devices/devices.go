@@ -54,6 +54,7 @@ func run(f *cmdutil.Factory, opts *options) error {
 	}
 
 	w := f.IOStreams.Out
-	reporter.PrintDeviceList(w, "iOS", iosDevices)
+	cs := f.IOStreams.ColorScheme()
+	reporter.PrintDeviceList(w, cs, "iOS", iosDevices)
 	return nil
 }
