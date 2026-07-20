@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/space-code/linkctl/internal/models"
+	"github.com/space-code/linkctl/internal/validator"
 	"github.com/space-code/linkctl/pkg/iostreams"
 )
 
@@ -178,6 +179,45 @@ func PrintLinkInfo(w io.Writer, cs *iostreams.ColorScheme, link *models.DeepLink
 
 	printKV(w, cs, rows)
 	fmt.Fprintln(w)
+}
+
+func PrintValidationResult(w io.Writer, cs *iostreams.ColorScheme, result *validator.Result) {
+	fmt.Fprintf(w, "\n%s Validation report for %s\n", cs.Bold("●"), cs.Bold(result.URL))
+	if result.Domain != "" {
+		fmt.Fprintf(w, "  Domain: %s\n", result.Domain)
+	}
+	fmt.Fprintln(w)
+
+	if len(result.Issues) == 0 {
+		fmt.Fprintf(w, "All server-side checks passed successfully!\n\n")
+		return
+	}
+
+	hasErrors := false
+	hasWarnings := false
+
+	for _, issue := range result.Issues {
+		switch issue.Level {
+		case "error":
+			hasErrors = true
+			fmt.Fprintf(w, "%s\n", cs.Red(issue.Message))
+		case "warning":
+			hasWarnings = true
+			fmt.Fprintf(w, "%s\n", cs.Yellow(issue.Message))
+		default:
+			fmt.Fprintf(w, "%s\n", issue.Message)
+		}
+	}
+
+	fmt.Fprintln(w)
+
+	if hasErrors {
+		fmt.Fprintf(w, "Validation failed with errors.\n\n")
+	} else if hasWarnings {
+		fmt.Fprintf(w, "Validation passed with warnings.\n\n")
+	} else {
+		fmt.Fprintf(w, "Validation passed.\n\n")
+	}
 }
 
 func PrintProjectScan(w io.Writer, cs *iostreams.ColorScheme, scan *models.ProjectScan) {
