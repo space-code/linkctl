@@ -1,7 +1,9 @@
 package root
 
 import (
+	checkCmd "github.com/space-code/linkctl/pkg/cmd/check"
 	devicesCmd "github.com/space-code/linkctl/pkg/cmd/devices"
+	scanCmd "github.com/space-code/linkctl/pkg/cmd/scan"
 	versionCmd "github.com/space-code/linkctl/pkg/cmd/version"
 	"github.com/space-code/linkctl/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -19,6 +21,8 @@ func NewCmdRoot(f *cmdutil.Factory, appVersion string) (*cobra.Command, error) {
 
 	cmd.AddCommand(versionCmd.NewCmdVersion(f))
 	cmd.AddCommand(devicesCmd.NewCmdDevices(f))
+	cmd.AddCommand(checkCmd.NewCmdCheck(f))
+	cmd.AddCommand(scanCmd.NewCmdScan(f))
 
 	return cmd, nil
 }
