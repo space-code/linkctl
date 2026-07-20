@@ -3,7 +3,7 @@ module github.com/space-code/linkctl
 go 1.26.0
 
 require (
-	github.com/bitrise-io/go-xcode v1.3.1
+	github.com/bitrise-io/go-xcode v1.3.4
 	github.com/fatih/color v1.19.0
 	github.com/spf13/cobra v1.10.2
 )
