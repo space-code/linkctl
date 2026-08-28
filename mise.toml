@@ -1,6 +1,6 @@
 [tools]
 git-cliff = "2.13.1"
-golangci-lint = "2.13.1"
+golangci-lint = "2.13.2"
 gofumpt = "0.11.0"
 "aqua:securego/gosec" = "2.29.0"
 
