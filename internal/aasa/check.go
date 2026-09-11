@@ -42,26 +42,33 @@ type CheckOptions struct {
 }
 
 // Check runs the full AASA validation suite against fetches (as produced by
-// FetchAll) and returns one models.ValidationResult per check, in the same
-// PASS/FAIL/WARN/INFO vocabulary used across the rest of linkctl.
+// FetchAll or FetchOne) and returns one models.ValidationResult per check,
+// in the same PASS/FAIL/WARN/INFO vocabulary used across the rest of
+// linkctl.
+//
+// The well-known endpoint is treated as authoritative when present (it's
+// what FetchAll always includes and what production callers care about),
+// but Check also works from a single non-well-known fetch — e.g.
+// `linkctl aasa --source apple-cdn` — falling back to root, then
+// apple-cdn, as the primary source to validate.
 func Check(fetches []Fetch, opts CheckOptions) []models.ValidationResult {
 	var results []models.ValidationResult
 
-	wellKnown := findFetch(fetches, SourceWellKnown)
-	if wellKnown == nil {
+	primary := primaryFetch(fetches)
+	if primary == nil {
 		return append(results, models.ValidationResult{
 			Check:   "AASA Fetch",
 			Status:  models.StatusFail,
-			Message: "no request was made to the well-known AASA endpoint",
+			Message: "no AASA source was fetched",
 		})
 	}
 
-	results = append(results, checkFetchBasics(*wellKnown)...)
-	if wellKnown.Body == nil {
+	results = append(results, checkFetchBasics(*primary)...)
+	if primary.Body == nil {
 		return results
 	}
 
-	file, err := Parse(wellKnown.Body)
+	file, err := Parse(primary.Body)
 	if err != nil {
 		return append(results, models.ValidationResult{
 			Check:   "AASA JSON",
@@ -78,11 +85,27 @@ func Check(fetches []Fetch, opts CheckOptions) []models.ValidationResult {
 	results = append(results, checkAppsField(file)...)
 	results = append(results, checkDetails(file, opts)...)
 
-	if cdn := findFetch(fetches, SourceAppleCDN); cdn != nil {
-		results = append(results, checkCDNConsistency(*wellKnown, *cdn)...)
+	// The CDN cross-check compares the primary source against Apple's CDN;
+	// skip it when the CDN fetch *is* the primary source (nothing to compare).
+	if primary.Source != SourceAppleCDN {
+		if cdn := findFetch(fetches, SourceAppleCDN); cdn != nil {
+			results = append(results, checkCDNConsistency(*primary, *cdn)...)
+		}
 	}
 
 	return results
+}
+
+// primaryFetch picks the fetch to treat as authoritative: well-known first
+// (what production callers and FetchAll care about most), then root, then
+// Apple's CDN — whichever was actually requested.
+func primaryFetch(fetches []Fetch) *Fetch {
+	for _, source := range []Source{SourceWellKnown, SourceRoot, SourceAppleCDN} {
+		if f := findFetch(fetches, source); f != nil {
+			return f
+		}
+	}
+	return nil
 }
 
 func findFetch(fetches []Fetch, source Source) *Fetch {
@@ -303,7 +326,7 @@ func checkTargetURL(file *models.AASAFile, target *url.URL) []models.ValidationR
 	}
 }
 
-func checkCDNConsistency(wellKnown, cdn Fetch) []models.ValidationResult {
+func checkCDNConsistency(primary, cdn Fetch) []models.ValidationResult {
 	if cdn.TLSError != "" || cdn.FetchError != "" {
 		return []models.ValidationResult{{
 			Check:   "Apple CDN",
@@ -330,12 +353,12 @@ func checkCDNConsistency(wellKnown, cdn Fetch) []models.ValidationResult {
 			Detail:  err.Error(),
 		}}
 	}
-	wkFile, err := Parse(wellKnown.Body)
+	primaryFile, err := Parse(primary.Body)
 	if err != nil {
-		return nil // already reported by checkDetails via the well-known parse
+		return nil // already reported by checkDetails via the primary source's parse
 	}
 
-	if reflect.DeepEqual(cdnFile, wkFile) {
+	if reflect.DeepEqual(cdnFile, primaryFile) {
 		return []models.ValidationResult{{
 			Check:   "Apple CDN",
 			Status:  models.StatusPass,

@@ -43,6 +43,49 @@ func TestCheck_NoWellKnownFetch(t *testing.T) {
 	}
 }
 
+// Regression test: `linkctl aasa --source apple-cdn` (or --source root)
+// fetches only that one source — Check must validate it directly instead
+// of assuming a well-known fetch is always present.
+func TestCheck_AppleCDNOnly_NoWellKnownFetch(t *testing.T) {
+	body := `{"applinks":{"apps":[],"details":[{"appID":"ABCDE12345.com.example.app","paths":["*"]}]}}`
+	fetches := []aasa.Fetch{{
+		Source:      aasa.SourceAppleCDN,
+		StatusCode:  200,
+		ContentType: "application/json",
+		SizeBytes:   len(body),
+		Body:        []byte(body),
+	}}
+
+	results := aasa.Check(fetches, aasa.CheckOptions{})
+
+	if hasStatus(results, "AASA Fetch", models.StatusFail) {
+		t.Errorf("did not expect a FAIL AASA Fetch result when apple-cdn was the only requested source, got %+v", results)
+	}
+	if !hasStatus(results, "AASA Fetch", models.StatusPass) {
+		t.Errorf("expected a PASS AASA Fetch result derived from the apple-cdn fetch, got %+v", results)
+	}
+	if !hasStatus(results, "applinks.details", models.StatusPass) {
+		t.Errorf("expected details to be validated from the apple-cdn fetch, got %+v", results)
+	}
+}
+
+func TestCheck_RootOnly_NoWellKnownFetch(t *testing.T) {
+	body := `{"applinks":{"apps":[],"details":[{"appID":"ABCDE12345.com.example.app","paths":["*"]}]}}`
+	fetches := []aasa.Fetch{{
+		Source:      aasa.SourceRoot,
+		StatusCode:  200,
+		ContentType: "application/json",
+		SizeBytes:   len(body),
+		Body:        []byte(body),
+	}}
+
+	results := aasa.Check(fetches, aasa.CheckOptions{})
+
+	if !hasStatus(results, "AASA Fetch", models.StatusPass) {
+		t.Errorf("expected a PASS AASA Fetch result derived from the root fetch, got %+v", results)
+	}
+}
+
 func TestCheck_HappyPath(t *testing.T) {
 	body := `{"applinks":{"apps":[],"details":[{"appID":"ABCDE12345.com.example.app","paths":["/profile/*"]}]}}`
 	fetches := []aasa.Fetch{wellKnownFetch(200, body)}

@@ -151,6 +151,32 @@ func TestAASACmd_TextOutput(t *testing.T) {
 	}
 }
 
+// Regression test: --source root (or apple-cdn) fetches only that one
+// source; the command must not spuriously fail assuming a well-known
+// fetch always exists (see internal/aasa.Check's primaryFetch fallback).
+func TestAASACmd_SourceRootOnly_Succeeds(t *testing.T) {
+	ts := newAASATLSServer(`{"applinks":{"apps":[],"details":[{"appID":"ABCDE12345.com.example.app","paths":["*"]}]}}`)
+	defer ts.Close()
+
+	// Serve the same AASA body at the legacy root path too.
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `{"applinks":{"apps":[],"details":[{"appID":"ABCDE12345.com.example.app","paths":["*"]}]}}`)
+	})
+
+	f, stdout := testutil.NewFactory(t)
+	cmd := aasa.NewCmdAASA(f)
+	cmd.SetArgs([]string{ts.URL, "--source", "root", "--insecure"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v\noutput: %s", err, stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "AASA Fetch") {
+		t.Errorf("expected an AASA Fetch check in output, got: %s", stdout.String())
+	}
+}
+
 func TestAASACmd_UnknownFlag(t *testing.T) {
 	f, _ := testutil.NewFactory(t)
 	cmd := aasa.NewCmdAASA(f)
