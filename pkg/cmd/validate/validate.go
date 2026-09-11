@@ -11,7 +11,8 @@ import (
 )
 
 type options struct {
-	asJSON bool
+	asJSON   bool
+	insecure bool
 }
 
 func NewCmdValidate(f *cmdutil.Factory) *cobra.Command {
@@ -21,8 +22,9 @@ func NewCmdValidate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "validate <link>",
 		Short: "Validate server-side deep link configuration (AASA)",
 		Long: `Validates the server-side configuration for a given deep link.
-Fetches apple-app-site-association (iOS) over the network
-and verifies domain health, SSL certificate, HTTP headers, and JSON structure.
+Fetches apple-app-site-association (iOS) over the network and verifies the
+TLS certificate, HTTP response, JSON structure, and — when the link has a
+path beyond the bare domain — whether that exact path is covered.
 
 Exits with code 0 when validation passes without errors, 1 otherwise.`,
 		Args: cobra.ExactArgs(1),
@@ -35,12 +37,13 @@ Exits with code 0 when validation passes without errors, 1 otherwise.`,
 	}
 
 	cmd.Flags().BoolVar(&opts.asJSON, "json", false, "Output results as JSON")
+	cmd.Flags().BoolVar(&opts.insecure, "insecure", false, "Skip TLS certificate verification")
 
 	return cmd
 }
 
 func run(f *cmdutil.Factory, link string, opts *options) error {
-	result, err := validator.ValidateDeepLink(link)
+	result, err := validator.ValidateDeepLink(link, validator.Options{Insecure: opts.insecure})
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}

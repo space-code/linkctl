@@ -2,6 +2,7 @@ package validate_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,16 +10,18 @@ import (
 
 	"github.com/space-code/linkctl/internal/testutil"
 	"github.com/space-code/linkctl/pkg/cmd/validate"
+	"github.com/space-code/linkctl/pkg/cmdutil"
 )
 
+// AASA must be served over HTTPS, so `validate` always fetches via
+// https:// — the mock server is TLS (self-signed cert), and tests pass
+// --insecure to accept it.
 func createMockValidationServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/.well-known/apple-app-site-association":
-			fmt.Fprintln(w, `{"applinks": {"details": []}}`)
-		case "/.well-known/assetlinks.json":
-			fmt.Fprintln(w, `[{"relation": ["delegate_permission/common.handle_all_urls"]}]`)
+			fmt.Fprintln(w, `{"applinks": {"apps": [], "details": [{"appID": "ABCDE12345.com.example.app", "paths": ["*"]}]}}`)
 		default:
 			http.NotFound(w, r)
 		}
@@ -60,7 +63,7 @@ func TestValidateCmd_Execution_JSON(t *testing.T) {
 	cmd := validate.NewCmdValidate(f)
 
 	targetURL := ts.URL + "/profile"
-	cmd.SetArgs([]string{targetURL, "--json"})
+	cmd.SetArgs([]string{targetURL, "--json", "--insecure"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error during execution: %v", err)
@@ -89,7 +92,7 @@ func TestValidateCmd_Execution_TextOutput(t *testing.T) {
 	cmd := validate.NewCmdValidate(f)
 
 	targetURL := ts.URL + "/profile"
-	cmd.SetArgs([]string{targetURL})
+	cmd.SetArgs([]string{targetURL, "--insecure"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error during execution: %v", err)
@@ -97,5 +100,41 @@ func TestValidateCmd_Execution_TextOutput(t *testing.T) {
 
 	if stdout.Len() == 0 {
 		t.Error("expected text reporter output, got empty stdout")
+	}
+}
+
+func TestValidateCmd_UncoveredPath_ExitsNonZero(t *testing.T) {
+	// This mock server restricts paths (unlike createMockValidationServer's
+	// "*"), so a path outside /profile/* is genuinely uncovered.
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintln(w, `{"applinks": {"apps": [], "details": [{"appID": "ABCDE12345.com.example.app", "paths": ["/profile/*"]}]}}`)
+	}))
+	defer ts.Close()
+
+	f, _ := testutil.NewFactory(t)
+	cmd := validate.NewCmdValidate(f)
+	cmd.SetArgs([]string{ts.URL + "/settings", "--insecure"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected an error for a path not covered by applinks.details")
+	}
+	if !errors.Is(err, cmdutil.ErrChecksFailed) {
+		t.Errorf("expected ErrChecksFailed, got %v", err)
+	}
+}
+
+func TestValidateCmd_WithoutInsecure_FailsOnSelfSignedCert(t *testing.T) {
+	ts := createMockValidationServer()
+	defer ts.Close()
+
+	f, _ := testutil.NewFactory(t)
+	cmd := validate.NewCmdValidate(f)
+	cmd.SetArgs([]string{ts.URL + "/profile"}) // no --insecure
+
+	err := cmd.Execute()
+	if !errors.Is(err, cmdutil.ErrChecksFailed) {
+		t.Errorf("expected ErrChecksFailed for an unverified self-signed cert, got %v", err)
 	}
 }
