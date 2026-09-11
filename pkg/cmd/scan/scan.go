@@ -3,7 +3,6 @@ package scan
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/space-code/linkctl/internal/appcheck"
 	"github.com/space-code/linkctl/internal/reporter"
@@ -61,7 +60,7 @@ func run(f *cmdutil.Factory, project string, opts *options) error {
 			return fmt.Errorf("encoding JSON: %w", err)
 		}
 		if len(result.RegisteredLinks) == 0 {
-			os.Exit(1)
+			return cmdutil.ErrChecksFailed
 		}
 		return nil
 	}
@@ -69,11 +68,11 @@ func run(f *cmdutil.Factory, project string, opts *options) error {
 	w := f.IOStreams.Out
 	cs := f.IOStreams.ColorScheme()
 
-	// reporter.PrintBanner(w, cs)
+	reporter.PrintBanner(w)
 	reporter.PrintProjectScan(w, cs, result)
 
 	if len(result.RegisteredLinks) == 0 {
-		os.Exit(1)
+		return cmdutil.ErrChecksFailed
 	}
 	return nil
 }

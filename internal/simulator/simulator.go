@@ -61,14 +61,29 @@ func GetBootedIOSDevices() ([]simctlDevice, error) {
 	}
 
 	var devices []simctlDevice
-	for _, devices := range payload.Devices {
-		for _, d := range devices {
+	for _, runtimeDevices := range payload.Devices {
+		for _, d := range runtimeDevices {
 			if strings.EqualFold(d.State, "Booted") && d.IsAvailable {
 				devices = append(devices, d)
 			}
 		}
 	}
 	return devices, nil
+}
+
+// OpenOnIOS opens a deep link on a booted simulator via `xcrun simctl openurl`.
+// device may be a UDID, a device name, or "" (defaults to "booted").
+func OpenOnIOS(device, rawURL string) (string, error) {
+	targetDevice := device
+	if targetDevice == "" {
+		targetDevice = "booted"
+	}
+
+	out, err := exec.Command("xcrun", "simctl", "openurl", targetDevice, rawURL).CombinedOutput()
+	if err != nil {
+		return string(out), fmt.Errorf("xcrun simctl openurl failed: %w", err)
+	}
+	return string(out), nil
 }
 
 func ResetIOSUniversalLinksCache(device string) error {

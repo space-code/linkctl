@@ -1,30 +1,14 @@
 package cache_test
 
 import (
-	"bytes"
 	"testing"
 
+	"github.com/space-code/linkctl/internal/testutil"
 	"github.com/space-code/linkctl/pkg/cmd/cache"
-	"github.com/space-code/linkctl/pkg/cmdutil"
-	"github.com/space-code/linkctl/pkg/iostreams"
 )
 
-func newFactory(t *testing.T) (*cmdutil.Factory, *bytes.Buffer) {
-	t.Helper()
-
-	ios, _, stdout, _ := iostreams.Test()
-
-	f := &cmdutil.Factory{
-		AppVersion:     "1.0.0",
-		ExecutableName: "linkctl",
-		IOStreams:      ios,
-	}
-
-	return f, stdout
-}
-
 func TestCacheResetCmd_MissingRequiredPlatformFlag(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := cache.NewCmdCacheReset(f)
 	cmd.SetArgs([]string{})
 
@@ -34,7 +18,7 @@ func TestCacheResetCmd_MissingRequiredPlatformFlag(t *testing.T) {
 }
 
 func TestCacheResetCmd_UnknownFlag(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := cache.NewCmdCacheReset(f)
 	cmd.SetArgs([]string{"--platform", "ios", "--unknown-flag"})
 
@@ -44,7 +28,7 @@ func TestCacheResetCmd_UnknownFlag(t *testing.T) {
 }
 
 func TestCacheResetCmd_InvalidPlatform(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := cache.NewCmdCacheReset(f)
 	cmd.SetArgs([]string{"--platform", "windows"})
 

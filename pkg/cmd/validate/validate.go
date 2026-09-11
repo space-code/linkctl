@@ -3,7 +3,6 @@ package validate
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/space-code/linkctl/internal/reporter"
 	"github.com/space-code/linkctl/internal/validator"
@@ -53,7 +52,7 @@ func run(f *cmdutil.Factory, link string, opts *options) error {
 			return fmt.Errorf("encoding JSON: %w", err)
 		}
 		if result.HasErrors() {
-			os.Exit(1)
+			return cmdutil.ErrChecksFailed
 		}
 		return nil
 	}
@@ -64,7 +63,7 @@ func run(f *cmdutil.Factory, link string, opts *options) error {
 	reporter.PrintValidationResult(w, cs, result)
 
 	if result.HasErrors() {
-		os.Exit(1)
+		return cmdutil.ErrChecksFailed
 	}
 	return nil
 }

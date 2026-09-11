@@ -1,32 +1,16 @@
 package devices_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
 
+	"github.com/space-code/linkctl/internal/testutil"
 	"github.com/space-code/linkctl/pkg/cmd/devices"
-	"github.com/space-code/linkctl/pkg/cmdutil"
-	"github.com/space-code/linkctl/pkg/iostreams"
 )
 
-func newFactory(t *testing.T) (*cmdutil.Factory, *bytes.Buffer) {
-	t.Helper()
-
-	ios, _, stdout, _ := iostreams.Test()
-
-	f := &cmdutil.Factory{
-		AppVersion:     "1.0.0",
-		ExecutableName: "linkctl",
-		IOStreams:      ios,
-	}
-
-	return f, stdout
-}
-
 func TestDevicesCmd_NoError(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := devices.NewCmdDevices(f)
 	cmd.SetArgs([]string{})
 	if err := cmd.Execute(); err != nil {
@@ -35,7 +19,7 @@ func TestDevicesCmd_NoError(t *testing.T) {
 }
 
 func TestDevicesCmd_JSONOutput_HasAllKeys(t *testing.T) {
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	cmd := devices.NewCmdDevices(f)
 	cmd.SetArgs([]string{"--json"})
 	if err := cmd.Execute(); err != nil {
@@ -51,7 +35,7 @@ func TestDevicesCmd_JSONOutput_HasAllKeys(t *testing.T) {
 }
 
 func TestDevicesCmd_UnknownFlag(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := devices.NewCmdDevices(f)
 	cmd.SetArgs([]string{"--unknown"})
 	if err := cmd.Execute(); err == nil {
@@ -60,7 +44,7 @@ func TestDevicesCmd_UnknownFlag(t *testing.T) {
 }
 
 func TestDevicesCmd_JSONOutput_Shape(t *testing.T) {
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	cmd := devices.NewCmdDevices(f)
 	cmd.SetArgs([]string{"--json"})
 	if err := cmd.Execute(); err != nil {

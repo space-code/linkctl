@@ -1,31 +1,15 @@
 package validate_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/space-code/linkctl/internal/testutil"
 	"github.com/space-code/linkctl/pkg/cmd/validate"
-	"github.com/space-code/linkctl/pkg/cmdutil"
-	"github.com/space-code/linkctl/pkg/iostreams"
 )
-
-func newFactory(t *testing.T) (*cmdutil.Factory, *bytes.Buffer) {
-	t.Helper()
-
-	ios, _, stdout, _ := iostreams.Test()
-
-	f := &cmdutil.Factory{
-		AppVersion:     "1.0.0",
-		ExecutableName: "linkctl",
-		IOStreams:      ios,
-	}
-
-	return f, stdout
-}
 
 func createMockValidationServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +26,7 @@ func createMockValidationServer() *httptest.Server {
 }
 
 func TestValidateCmd_MissingArgs(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := validate.NewCmdValidate(f)
 	cmd.SetArgs([]string{})
 	if err := cmd.Execute(); err == nil {
@@ -51,7 +35,7 @@ func TestValidateCmd_MissingArgs(t *testing.T) {
 }
 
 func TestValidateCmd_TooManyArgs(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := validate.NewCmdValidate(f)
 	cmd.SetArgs([]string{"https://example.com/1", "https://example.com/2"})
 	if err := cmd.Execute(); err == nil {
@@ -60,7 +44,7 @@ func TestValidateCmd_TooManyArgs(t *testing.T) {
 }
 
 func TestValidateCmd_UnknownFlag(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := validate.NewCmdValidate(f)
 	cmd.SetArgs([]string{"https://example.com", "--invalid-flag"})
 	if err := cmd.Execute(); err == nil {
@@ -72,7 +56,7 @@ func TestValidateCmd_Execution_JSON(t *testing.T) {
 	ts := createMockValidationServer()
 	defer ts.Close()
 
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	cmd := validate.NewCmdValidate(f)
 
 	targetURL := ts.URL + "/profile"
@@ -101,7 +85,7 @@ func TestValidateCmd_Execution_TextOutput(t *testing.T) {
 	ts := createMockValidationServer()
 	defer ts.Close()
 
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	cmd := validate.NewCmdValidate(f)
 
 	targetURL := ts.URL + "/profile"

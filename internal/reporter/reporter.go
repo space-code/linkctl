@@ -13,7 +13,7 @@ import (
 )
 
 func PrintBanner(w io.Writer) {
-	fmt.Println(w, "Debugger")
+	fmt.Fprintln(w, "Debugger")
 }
 
 func PrintDeviceList(w io.Writer, cs *iostreams.ColorScheme, platform string, devices []string) {

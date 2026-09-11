@@ -1,15 +1,13 @@
 package check_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/space-code/linkctl/internal/testutil"
 	"github.com/space-code/linkctl/pkg/cmd/check"
-	"github.com/space-code/linkctl/pkg/cmdutil"
-	"github.com/space-code/linkctl/pkg/iostreams"
 )
 
 const mockPbxproj = `<?xml version="1.0" encoding="UTF-8"?>
@@ -146,20 +144,6 @@ const mockInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>`
 
-func newFactory(t *testing.T) (*cmdutil.Factory, *bytes.Buffer) {
-	t.Helper()
-
-	ios, _, stdout, _ := iostreams.Test()
-
-	f := &cmdutil.Factory{
-		AppVersion:     "1.0.0",
-		ExecutableName: "linkctl",
-		IOStreams:      ios,
-	}
-
-	return f, stdout
-}
-
 func createMockProject(t *testing.T) (string, func()) {
 	tmpDir, err := os.MkdirTemp("", "linkctl-cmd-test-*")
 	if err != nil {
@@ -194,7 +178,7 @@ func createMockProject(t *testing.T) (string, func()) {
 }
 
 func TestCheckCmd_InvalidLink(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := check.NewCmdCheck(f)
 	cmd.SetArgs([]string{""})
 	if err := cmd.Execute(); err == nil {
@@ -203,7 +187,7 @@ func TestCheckCmd_InvalidLink(t *testing.T) {
 }
 
 func TestCheckCmd_AndroidProject(t *testing.T) {
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 
 	// Create dummy android project (just Manifest)
 	tmpDir, err := os.MkdirTemp("", "linkctl-android-test-*")
@@ -234,7 +218,7 @@ func TestCheckCmd_AndroidProject(t *testing.T) {
 }
 
 func TestCheckCmd_IOSProject_WithConfiguration(t *testing.T) {
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	projDir, cleanup := createMockProject(t)
 	defer cleanup()
 
@@ -266,7 +250,7 @@ func TestCheckCmd_IOSProject_WithConfiguration(t *testing.T) {
 }
 
 func TestCheckCmd_UnknownFlag(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := check.NewCmdCheck(f)
 	cmd.SetArgs([]string{"https://example.com", "--unknown"})
 	if err := cmd.Execute(); err == nil {

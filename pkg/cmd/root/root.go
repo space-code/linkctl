@@ -19,6 +19,11 @@ func NewCmdRoot(f *cmdutil.Factory, appVersion string) (*cobra.Command, error) {
 		Annotations: map[string]string{
 			"versionInfo": versionCmd.Format(appVersion),
 		},
+		// Errors and usage are handled once, centrally, in internal/cmd.Main —
+		// letting cobra also print them would duplicate the message and dump
+		// full usage text on every check failure, which is unreadable in CI logs.
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	cmd.AddCommand(versionCmd.NewCmdVersion(f))

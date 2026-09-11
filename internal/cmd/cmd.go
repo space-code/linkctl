@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/space-code/linkctl/internal/build"
 	"github.com/space-code/linkctl/pkg/cmd/factory"
 	"github.com/space-code/linkctl/pkg/cmd/root"
+	"github.com/space-code/linkctl/pkg/cmdutil"
 )
 
 type exitCode int
@@ -31,7 +33,9 @@ func Main() exitCode {
 	}
 
 	if _, err := rootCmd.ExecuteContextC(ctx); err != nil {
-		fmt.Fprintf(stderr, "error: %s\n", err)
+		if !errors.Is(err, cmdutil.ErrChecksFailed) {
+			fmt.Fprintf(stderr, "error: %s\n", err)
+		}
 		return exitError
 	}
 

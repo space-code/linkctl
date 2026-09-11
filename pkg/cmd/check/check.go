@@ -3,7 +3,6 @@ package check
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/space-code/linkctl/internal/appcheck"
 	"github.com/space-code/linkctl/internal/parser"
@@ -59,7 +58,7 @@ func run(f *cmdutil.Factory, rawLink string, opts *options) error {
 			return err
 		}
 		if !report.Summary.OK {
-			os.Exit(1)
+			return cmdutil.ErrChecksFailed
 		}
 		return nil
 	}
@@ -67,14 +66,12 @@ func run(f *cmdutil.Factory, rawLink string, opts *options) error {
 	w := f.IOStreams.Out
 	cs := f.IOStreams.ColorScheme()
 
-	// reporter.PrintBanner(w, cs)
+	reporter.PrintBanner(w)
 	reporter.PrintLinkInfo(w, cs, link)
 	reporter.PrintAppCheckReport(w, cs, report)
 
-	fmt.Println(report.Checks)
-
 	if !report.Summary.OK {
-		os.Exit(1)
+		return cmdutil.ErrChecksFailed
 	}
 	return nil
 }

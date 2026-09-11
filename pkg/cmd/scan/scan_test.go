@@ -1,15 +1,13 @@
 package scan_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/space-code/linkctl/internal/testutil"
 	"github.com/space-code/linkctl/pkg/cmd/scan"
-	"github.com/space-code/linkctl/pkg/cmdutil"
-	"github.com/space-code/linkctl/pkg/iostreams"
 )
 
 const mockPbxproj = `<?xml version="1.0" encoding="UTF-8"?>
@@ -136,20 +134,6 @@ const mockInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>`
 
-func newFactory(t *testing.T) (*cmdutil.Factory, *bytes.Buffer) {
-	t.Helper()
-
-	ios, _, stdout, _ := iostreams.Test()
-
-	f := &cmdutil.Factory{
-		AppVersion:     "1.0.0",
-		ExecutableName: "linkctl",
-		IOStreams:      ios,
-	}
-
-	return f, stdout
-}
-
 func createMockIOSProject(t *testing.T) (string, func()) {
 	tmpDir, err := os.MkdirTemp("", "linkctl-scan-ios-*")
 	if err != nil {
@@ -184,7 +168,7 @@ func createMockIOSProject(t *testing.T) (string, func()) {
 }
 
 func TestScanCmd_TooManyArgs(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := scan.NewCmdScan(f)
 	cmd.SetArgs([]string{"./path1", "./path2"})
 	if err := cmd.Execute(); err == nil {
@@ -193,7 +177,7 @@ func TestScanCmd_TooManyArgs(t *testing.T) {
 }
 
 func TestScanCmd_UnknownFlag(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := scan.NewCmdScan(f)
 	cmd.SetArgs([]string{"--invalid-flag"})
 	if err := cmd.Execute(); err == nil {
@@ -202,7 +186,7 @@ func TestScanCmd_UnknownFlag(t *testing.T) {
 }
 
 func TestScanCmd_NonExistentDirectory(t *testing.T) {
-	f, _ := newFactory(t)
+	f, _ := testutil.NewFactory(t)
 	cmd := scan.NewCmdScan(f)
 	cmd.SetArgs([]string{"/non/existent/path/for/linkctl/test"})
 	if err := cmd.Execute(); err == nil {
@@ -211,7 +195,7 @@ func TestScanCmd_NonExistentDirectory(t *testing.T) {
 }
 
 func TestScanCmd_IOSProject_JSON(t *testing.T) {
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	projDir, cleanup := createMockIOSProject(t)
 	defer cleanup()
 
@@ -237,7 +221,7 @@ func TestScanCmd_IOSProject_JSON(t *testing.T) {
 }
 
 func TestScanCmd_IOSProject_TextOutput(t *testing.T) {
-	f, stdout := newFactory(t)
+	f, stdout := testutil.NewFactory(t)
 	projDir, cleanup := createMockIOSProject(t)
 	defer cleanup()
 
