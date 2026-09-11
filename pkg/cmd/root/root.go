@@ -5,6 +5,7 @@ import (
 	cacheCmd "github.com/space-code/linkctl/pkg/cmd/cache"
 	checkCmd "github.com/space-code/linkctl/pkg/cmd/check"
 	devicesCmd "github.com/space-code/linkctl/pkg/cmd/devices"
+	onelinkCmd "github.com/space-code/linkctl/pkg/cmd/onelink"
 	resolveCmd "github.com/space-code/linkctl/pkg/cmd/resolve"
 	scanCmd "github.com/space-code/linkctl/pkg/cmd/scan"
 	validateCmd "github.com/space-code/linkctl/pkg/cmd/validate"
@@ -36,6 +37,7 @@ func NewCmdRoot(f *cmdutil.Factory, appVersion string) (*cobra.Command, error) {
 	cmd.AddCommand(cacheCmd.NewCmdCacheReset(f))
 	cmd.AddCommand(aasaCmd.NewCmdAASA(f))
 	cmd.AddCommand(resolveCmd.NewCmdResolve(f))
+	cmd.AddCommand(onelinkCmd.NewCmdOneLink(f))
 
 	return cmd, nil
 }
