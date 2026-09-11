@@ -87,18 +87,43 @@ type AASAFile struct {
 
 // AASADetail is one entry in the applinks.details array.
 type AASADetail struct {
-	AppID      string          `json:"appID"`                // "<TeamID>.<BundleID>"
+	AppID      string          `json:"appID,omitempty"`      // "<TeamID>.<BundleID>"
+	AppIDs     []string        `json:"appIDs,omitempty"`     // multiple apps sharing one entry
 	Paths      []string        `json:"paths,omitempty"`      // legacy format
 	Components []AASAComponent `json:"components,omitempty"` // modern format (iOS 13+)
 }
 
+// AllAppIDs returns every app identifier declared on this entry, whether it
+// arrived via the singular "appID" or the plural "appIDs" key.
+func (d AASADetail) AllAppIDs() []string {
+	var ids []string
+	if d.AppID != "" {
+		ids = append(ids, d.AppID)
+	}
+	ids = append(ids, d.AppIDs...)
+	return ids
+}
+
 // AASAComponent is a modern path-matcher in AASA (iOS 13+).
+//
+// Query is typed as any because Apple allows the "?" key to be either a
+// single glob string (e.g. "?mode=*") or an object mapping individual query
+// parameter names to glob patterns (e.g. {"a": "1", "b": "*"}).
 type AASAComponent struct {
 	Path     string `json:"/,omitempty"`
-	Query    string `json:"?,omitempty"`
+	Query    any    `json:"?,omitempty"`
 	Fragment string `json:"#,omitempty"`
 	Comment  string `json:"comment,omitempty"`
 	Exclude  bool   `json:"exclude,omitempty"`
+
+	// CaseSensitive defaults to true per Apple's spec when absent; a pointer
+	// distinguishes "not set" from an explicit false.
+	CaseSensitive *bool `json:"caseSensitive,omitempty"`
+
+	// PercentEncoded, when true, means Path/Query/Fragment patterns should be
+	// matched against the percent-encoded form of the incoming URL instead of
+	// the decoded form.
+	PercentEncoded bool `json:"percentEncoded,omitempty"`
 }
 
 // AssetLinksFile is the JSON shape of /.well-known/assetlinks.json.
