@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/space-code/linkctl/internal/testutil"
@@ -208,6 +209,73 @@ func TestCICmd_FailOnWarning(t *testing.T) {
 	cmd2.SetArgs([]string{"--config", path, "--fail-on", "warning", "--insecure"})
 	if err := cmd2.Execute(); !errors.Is(err, cmdutil.ErrChecksFailed) {
 		t.Errorf("expected ErrChecksFailed with --fail-on=warning, got %v", err)
+	}
+}
+
+func TestCICmd_OneLinkFinalHost_Match_Passes(t *testing.T) {
+	finalTS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/apple-app-site-association" {
+			http.NotFound(w, r) // no AASA on the landing domain; not relevant to this test
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer finalTS.Close()
+	finalHost := strings.TrimPrefix(finalTS.URL, "https://")
+
+	oneLinkTS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/apple-app-site-association" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, finalTS.URL+"/landing", http.StatusFound)
+	}))
+	defer oneLinkTS.Close()
+
+	link := oneLinkTS.URL + "/abc/xyz?deep_link_value=x&af_web_dp=https://example.com&pid=google&c=x"
+	path := writeConfig(t, fmt.Sprintf("links:\n  - url: %s\n    expect: onelink\n    finalHost: %s\n", link, finalHost))
+
+	f, stdout := testutil.NewFactory(t)
+	cmd := ci.NewCmdCI(f)
+	cmd.SetArgs([]string{"--config", path, "--insecure"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v\noutput: %s", err, stdout.String())
+	}
+}
+
+func TestCICmd_OneLinkFinalHost_Mismatch_ExitsNonZero(t *testing.T) {
+	finalTS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/apple-app-site-association" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer finalTS.Close()
+
+	oneLinkTS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/apple-app-site-association" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, finalTS.URL+"/landing", http.StatusFound)
+	}))
+	defer oneLinkTS.Close()
+
+	link := oneLinkTS.URL + "/abc/xyz?deep_link_value=x&af_web_dp=https://example.com&pid=google&c=x"
+	path := writeConfig(t, fmt.Sprintf("links:\n  - url: %s\n    expect: onelink\n    finalHost: totally-different-host.example\n", link))
+
+	f, stdout := testutil.NewFactory(t)
+	cmd := ci.NewCmdCI(f)
+	cmd.SetArgs([]string{"--config", path, "--insecure", "--format", "json"})
+
+	err := cmd.Execute()
+	if !errors.Is(err, cmdutil.ErrChecksFailed) {
+		t.Fatalf("expected ErrChecksFailed for a final-host mismatch, got %v\noutput: %s", err, stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "\"check\": \"Final Host\"") {
+		t.Errorf("expected a Final Host check in output, got: %s", stdout.String())
 	}
 }
 

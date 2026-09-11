@@ -216,6 +216,40 @@ func TestAnalyze_FollowsRedirectAndChecksFinalDomainAASA(t *testing.T) {
 	}
 }
 
+// Regression test: a landing page with no AASA at all (a plain marketing
+// page, say) must be reported as informational, not FAIL — the same
+// leniency already applied to the OneLink domain itself.
+func TestAnalyze_NoAASAOnFinalDomainIsInfoNotFail(t *testing.T) {
+	finalTS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/apple-app-site-association" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer finalTS.Close()
+
+	oneLinkTS := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/apple-app-site-association" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, finalTS.URL+"/landing", http.StatusFound)
+	}))
+	defer oneLinkTS.Close()
+
+	link := oneLinkTS.URL + "/abc/xyz?deep_link_value=x&af_web_dp=https://example.com&pid=google&c=x"
+	r, err := onelink.Analyze(context.Background(), newInsecureClient(), link, onelink.Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	c := findCheck(r.Checks, "Final Domain AASA")
+	if c == nil || c.Status != models.StatusInfo {
+		t.Errorf("expected INFO for a landing domain with no AASA, got %+v (all checks: %+v)", c, r.Checks)
+	}
+}
+
 func TestAnalyze_InvalidScheme(t *testing.T) {
 	_, err := onelink.Analyze(context.Background(), newClient(), "myapp://profile", onelink.Options{SkipResolve: true})
 	if err == nil {

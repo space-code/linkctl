@@ -226,11 +226,19 @@ func checkFinalHost(result *onelink.Report, wantHost string) models.ValidationRe
 		}
 	}
 	finalURL, err := url.Parse(result.Trace.Final)
-	if err != nil || !strings.EqualFold(finalURL.Host, wantHost) {
+	if err != nil {
 		return models.ValidationResult{
 			Check:   "Final Host",
 			Status:  models.StatusFail,
-			Message: fmt.Sprintf("expected final host %q, got %q", wantHost, result.Trace.Final),
+			Message: fmt.Sprintf("could not parse final destination %q", result.Trace.Final),
+		}
+	}
+	if !strings.EqualFold(finalURL.Host, wantHost) {
+		return models.ValidationResult{
+			Check:   "Final Host",
+			Status:  models.StatusFail,
+			Message: fmt.Sprintf("expected final host %q, got %q", wantHost, finalURL.Host),
+			Detail:  result.Trace.Final,
 		}
 	}
 	return models.ValidationResult{

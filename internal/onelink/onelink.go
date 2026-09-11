@@ -201,19 +201,9 @@ func checkParams(params map[string]string) []models.ValidationResult {
 // is validated fully, since a broken AASA that *was* set up deliberately is
 // a real problem.
 func checkDomainAASA(ctx context.Context, client *http.Client, u *url.URL, want aasa.AppIdentity) []models.ValidationResult {
-	fetch := aasa.FetchOne(ctx, client, u.Host, aasa.SourceWellKnown)
-
-	if fetch.StatusCode == 0 || fetch.StatusCode == http.StatusNotFound {
-		return []models.ValidationResult{{
-			Check:   "OneLink Domain AASA",
-			Status:  models.StatusInfo,
-			Message: "no AASA on the OneLink domain",
-			Detail:  "Expected for standard OneLink setups that redirect via JavaScript rather than serving a Universal Link directly",
-		}}
-	}
-
-	checks := aasa.Check([]aasa.Fetch{fetch}, aasa.CheckOptions{Want: want, TargetURL: u})
-	return prefixChecks("OneLink Domain AASA", checks)
+	return checkAASALenient(ctx, client, u, want,
+		"OneLink Domain AASA", "no AASA on the OneLink domain",
+		"Expected for standard OneLink setups that redirect via JavaScript rather than serving a Universal Link directly")
 }
 
 // checkFinalDestinationAASA follows up on where the link actually lands:
@@ -221,6 +211,8 @@ func checkDomainAASA(ctx context.Context, client *http.Client, u *url.URL, want 
 // link and not a dead end), that domain's AASA is checked for coverage of
 // the final path — this is the check a plain `aasa`/`validate` run against
 // the OneLink URL itself could never make, since the AASA lives elsewhere.
+// A missing AASA here is informational too: the landing page may just be a
+// plain marketing/fallback page with no Universal Link support at all.
 func checkFinalDestinationAASA(ctx context.Context, client *http.Client, trace *resolve.Trace, want aasa.AppIdentity) []models.ValidationResult {
 	if trace.Final == "" || len(trace.Hops) == 0 {
 		return nil
@@ -237,9 +229,29 @@ func checkFinalDestinationAASA(ctx context.Context, client *http.Client, trace *
 		return nil
 	}
 
-	fetch := aasa.FetchOne(ctx, client, finalURL.Host, aasa.SourceWellKnown)
-	checks := aasa.Check([]aasa.Fetch{fetch}, aasa.CheckOptions{Want: want, TargetURL: finalURL})
-	return prefixChecks("Final Domain AASA", checks)
+	return checkAASALenient(ctx, client, finalURL, want,
+		"Final Domain AASA", "no AASA on the landing domain",
+		"The link may simply land on a plain page with no Universal Link support")
+}
+
+// checkAASALenient fetches the well-known AASA at u.Host and validates it,
+// treating a missing file (404/unreachable) as informational rather than a
+// failure — appropriate for domains where an AASA is optional, unlike the
+// primary domain a `validate`/`aasa` invocation targets directly.
+func checkAASALenient(ctx context.Context, client *http.Client, u *url.URL, want aasa.AppIdentity, label, infoMessage, infoDetail string) []models.ValidationResult {
+	fetch := aasa.FetchOne(ctx, client, u.Host, aasa.SourceWellKnown)
+
+	if fetch.StatusCode == 0 || fetch.StatusCode == http.StatusNotFound {
+		return []models.ValidationResult{{
+			Check:   label,
+			Status:  models.StatusInfo,
+			Message: infoMessage,
+			Detail:  infoDetail,
+		}}
+	}
+
+	checks := aasa.Check([]aasa.Fetch{fetch}, aasa.CheckOptions{Want: want, TargetURL: u})
+	return prefixChecks(label, checks)
 }
 
 func prefixChecks(prefix string, checks []models.ValidationResult) []models.ValidationResult {

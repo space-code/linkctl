@@ -1,0 +1,50 @@
+# Example config for `linkctl ci`. Copy to linkctl.yml and adjust, or pass
+# --config <path> to point at a different file/location.
+
+# Path to your Xcode project. Used to:
+#   - derive bundleId/teamId below when they're omitted
+#   - run the app-project-side check (checks.appProject) against each link
+project: ./MyApp.xcodeproj
+
+# Only needed when the project has more than one native target.
+# target: MyApp
+
+# Expected app identity, checked against every AASA file this run touches.
+# Omit either (or both) to skip that part of the check — or derive them
+# automatically from --project instead of hardcoding them here.
+bundleId: com.example.app
+teamId: ABCDE12345
+
+# User-Agent sent on every request: ios (default), android, desktop, bot,
+# or a fully custom string. Matters most for `onelink`/`resolve`, since
+# many redirect services branch on it.
+userAgent: ios
+
+# Per-request HTTP timeout, as a Go duration string.
+timeout: 15s
+
+links:
+  # expect defaults to "universal-link" for an http(s) URL when omitted —
+  # explicit here for clarity.
+  - url: https://example.com/profile/42
+    expect: universal-link
+
+  # OneLink links must set expect explicitly — a URL's host alone isn't a
+  # reliable signal once branded domains are involved. finalHost is
+  # optional: when set, the redirect chain's actual landing host is
+  # checked against it.
+  - url: https://example.onelink.me/abc1/xyz789
+    expect: onelink
+    finalHost: example.com
+
+  # Custom schemes have nothing to check server-side; listing them here
+  # still runs the app-project check (below) if enabled.
+  - url: myapp://profile/42
+    expect: custom-scheme
+
+# Optional check toggles. Omitting "checks" entirely runs everything below
+# with its default (all true).
+checks:
+  aasa: true        # structural/JSON checks on the well-known AASA endpoint
+  appleCdn: true     # cross-check against Apple's AASA CDN (extra network calls)
+  appProject: true   # run check-app's project-side validation for each link
