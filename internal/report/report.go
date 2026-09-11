@@ -7,10 +7,13 @@
 package report
 
 import (
+	"fmt"
+	"io"
 	"slices"
 	"time"
 
 	"github.com/space-code/linkctl/internal/models"
+	"github.com/space-code/linkctl/pkg/iostreams"
 )
 
 // Format names accepted by the --format flag across commands that use this
@@ -111,4 +114,25 @@ func (r *Report) Summary() models.JSONSummary {
 // configured links) is a configuration question, not a check failure.
 func (r *Report) OK() bool {
 	return r.Summary().Failed == 0
+}
+
+// Render writes r to w in the given format, sharing one switch across every
+// command that produces a Report instead of repeating it per command.
+// format must be one of ValidFormats — callers should validate with
+// IsValidFormat before doing any network work.
+func Render(w io.Writer, cs *iostreams.ColorScheme, format string, r *Report) error {
+	switch format {
+	case FormatJSON:
+		return WriteJSON(w, r)
+	case FormatGitHub:
+		WriteGitHub(w, r)
+		return nil
+	case FormatJUnit:
+		return WriteJUnit(w, r)
+	case FormatText, "":
+		WriteText(w, cs, r)
+		return nil
+	default:
+		return fmt.Errorf("invalid format %q: must be one of %v", format, ValidFormats)
+	}
 }

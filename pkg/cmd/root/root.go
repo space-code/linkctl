@@ -1,6 +1,7 @@
 package root
 
 import (
+	aasaCmd "github.com/space-code/linkctl/pkg/cmd/aasa"
 	cacheCmd "github.com/space-code/linkctl/pkg/cmd/cache"
 	checkCmd "github.com/space-code/linkctl/pkg/cmd/check"
 	devicesCmd "github.com/space-code/linkctl/pkg/cmd/devices"
@@ -32,6 +33,7 @@ func NewCmdRoot(f *cmdutil.Factory, appVersion string) (*cobra.Command, error) {
 	cmd.AddCommand(scanCmd.NewCmdScan(f))
 	cmd.AddCommand(validateCmd.NewCmdValidate(f))
 	cmd.AddCommand(cacheCmd.NewCmdCacheReset(f))
+	cmd.AddCommand(aasaCmd.NewCmdAASA(f))
 
 	return cmd, nil
 }

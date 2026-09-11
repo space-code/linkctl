@@ -152,6 +152,7 @@ type XcodeProject struct {
 type XcodeTarget struct {
 	Name     string `json:"name"`
 	BundleID string `json:"bundle_id,omitempty"`
+	TeamID   string `json:"team_id,omitempty"` // DEVELOPMENT_TEAM build setting
 
 	// Paths are project-relative (e.g. "MyApp/MyApp.entitlements").
 	EntitlementsPath string `json:"entitlements_path,omitempty"`

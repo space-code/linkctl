@@ -101,10 +101,13 @@ func applyBuildSettings(
 		if raw, err := bs.String("GENERATE_INFOPLIST_FILE"); err == nil {
 			t.GeneratesInfoPlist = strings.EqualFold(raw, "yes")
 		}
+		if raw, err := bs.String("DEVELOPMENT_TEAM"); err == nil && raw != "" {
+			t.TeamID = raw
+		}
 	}
 
 	// Fallback to manual first configuration parsing if any value is still empty
-	if t.BundleID == "" || t.EntitlementsPath == "" || t.InfoPlistPath == "" {
+	if t.BundleID == "" || t.EntitlementsPath == "" || t.InfoPlistPath == "" || t.TeamID == "" {
 		for _, cfg := range target.BuildConfigurationList.BuildConfigurations {
 			fillFromBuildSettings(t, cfg.BuildSettings)
 			break
@@ -138,6 +141,11 @@ func fillFromBuildSettings(t *models.XcodeTarget, bs serialized.Object) {
 	if !t.GeneratesInfoPlist {
 		if raw, err := bs.String("GENERATE_INFOPLIST_FILE"); err == nil {
 			t.GeneratesInfoPlist = strings.EqualFold(raw, "yes")
+		}
+	}
+	if t.TeamID == "" {
+		if raw, err := bs.String("DEVELOPMENT_TEAM"); err == nil && raw != "" {
+			t.TeamID = raw
 		}
 	}
 }

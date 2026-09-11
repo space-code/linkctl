@@ -104,6 +104,8 @@ const mockPbxproj = `<?xml version="1.0" encoding="UTF-8"?>
 				<string>MyApp.entitlements</string>
 				<key>INFOPLIST_FILE</key>
 				<string>Info.plist</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>ABCDE12345</string>
 			</dict>
 		</dict>
 		<key>TARGET_CONFIG_ID_DEBUG</key>
@@ -270,6 +272,10 @@ func TestParseXcodeProject_ReleaseConfiguration(t *testing.T) {
 
 	if len(target.URLSchemes) != 1 || target.URLSchemes[0].Schemes[0] != "myapp" {
 		t.Errorf("unexpected URL schemes: %v", target.URLSchemes)
+	}
+
+	if target.TeamID != "ABCDE12345" {
+		t.Errorf("expected team ID 'ABCDE12345', got '%s'", target.TeamID)
 	}
 }
 

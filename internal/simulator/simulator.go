@@ -79,6 +79,7 @@ func OpenOnIOS(device, rawURL string) (string, error) {
 		targetDevice = "booted"
 	}
 
+	//nolint:gosec // device/rawURL are CLI-flag inputs passed as argv, not through a shell
 	out, err := exec.Command("xcrun", "simctl", "openurl", targetDevice, rawURL).CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf("xcrun simctl openurl failed: %w", err)
@@ -92,6 +93,7 @@ func ResetIOSUniversalLinksCache(device string) error {
 		targetDevice = "booted"
 	}
 
+	//nolint:gosec // device is a CLI-flag input passed as argv, not through a shell
 	cmdKillInside := exec.Command("xcrun", "simctl", "spawn", targetDevice, "killall", "swcd")
 	if err := cmdKillInside.Run(); err != nil {
 		cmdKillHost := exec.Command("pkill", "-9", "swcd")
