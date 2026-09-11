@@ -16,6 +16,29 @@ func PrintBanner(w io.Writer) {
 	fmt.Fprintln(w, "Debugger")
 }
 
+// PrintSimulationResult prints the outcome of opening a deep link on a
+// simulator/emulator (the `open` command).
+func PrintSimulationResult(w io.Writer, cs *iostreams.ColorScheme, result *models.SimulationResult) {
+	if result.Success {
+		fmt.Fprintf(w, "%s Opened on %s\n", cs.Green("✔"), simulationTarget(result))
+	} else {
+		fmt.Fprintf(w, "%s Failed to open on %s\n", cs.Red("✖"), simulationTarget(result))
+	}
+	if result.Output != "" {
+		fmt.Fprintf(w, "  %s %s\n", cs.Muted("↳"), strings.TrimSpace(result.Output))
+	}
+	if result.Error != "" {
+		fmt.Fprintf(w, "  %s %s\n", cs.Muted("↳"), result.Error)
+	}
+}
+
+func simulationTarget(result *models.SimulationResult) string {
+	if result.DeviceID != "" {
+		return fmt.Sprintf("%s (%s)", result.Platform, result.DeviceID)
+	}
+	return result.Platform + " (booted)"
+}
+
 func PrintDeviceList(w io.Writer, cs *iostreams.ColorScheme, platform string, devices []string) {
 	if len(devices) == 0 {
 		fmt.Fprintf(w, "  %s  No %s devices found (booted / connected)\n\n", "⚠️", platform)
