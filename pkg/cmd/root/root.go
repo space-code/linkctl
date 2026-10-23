@@ -1,6 +1,7 @@
 package root
 
 import (
+	cacheCmd "github.com/space-code/linkctl/pkg/cmd/cache"
 	checkCmd "github.com/space-code/linkctl/pkg/cmd/check"
 	devicesCmd "github.com/space-code/linkctl/pkg/cmd/devices"
 	scanCmd "github.com/space-code/linkctl/pkg/cmd/scan"
@@ -25,6 +26,7 @@ func NewCmdRoot(f *cmdutil.Factory, appVersion string) (*cobra.Command, error) {
 	cmd.AddCommand(checkCmd.NewCmdCheck(f))
 	cmd.AddCommand(scanCmd.NewCmdScan(f))
 	cmd.AddCommand(validateCmd.NewCmdValidate(f))
+	cmd.AddCommand(cacheCmd.NewCmdCacheReset(f))
 
 	return cmd, nil
 }

@@ -70,3 +70,18 @@ func GetBootedIOSDevices() ([]simctlDevice, error) {
 	}
 	return devices, nil
 }
+
+func ResetIOSUniversalLinksCache(device string) error {
+	targetDevice := device
+	if targetDevice == "" {
+		targetDevice = "booted"
+	}
+
+	cmdKillInside := exec.Command("xcrun", "simctl", "spawn", targetDevice, "killall", "swcd")
+	if err := cmdKillInside.Run(); err != nil {
+		cmdKillHost := exec.Command("pkill", "-9", "swcd")
+		_ = cmdKillHost.Run()
+	}
+
+	return nil
+}
